@@ -299,7 +299,7 @@ The testing of a cert-manager weebhook is a bit special and not a typical unit o
   This is a config file that basically informs the test fixture how to find the Kubernetes secret and keys that contains the Loopia API username and password.
 
 - **testdata/loopia/loopia-credentials.yaml:**\
-  A Kubernetes secret configuration that will be applied to the Kubernetes control plane during test. Real Loopia API credentials is required since the tests connects to Loopia creating a cert-manager-dns01-tests sub domain with a TXT-record.
+  A Kubernetes secret configuration that will be applied to the Kubernetes control plane during test. Real Loopia API credentials is required since the tests connects to Loopia creating a cert-manager-dns01-tests sub domain with a TXT-record. Create it by copying `loopia-credentials.yaml.example` and filling in your credentials; it is git-ignored so the credentials are not committed.
 
 - **testdata/bin:**\
   Folder location for the test-binaries (git-ignored).
