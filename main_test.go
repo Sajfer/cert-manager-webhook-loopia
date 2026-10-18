@@ -1,3 +1,8 @@
+//go:build conformance
+
+// The conformance tests run against the live Loopia API and need envtest
+// binaries, so they are behind the "conformance" build tag. Run them with `make test`.
+
 package main
 
 import (
@@ -19,6 +24,11 @@ var (
 )
 
 func TestRunsSuite(t *testing.T) {
+	// The conformance suite talks to the live Loopia API, so it only runs when a test zone is given.
+	if zone == "" {
+		t.Skip("TEST_ZONE_NAME not set, skipping conformance tests against the live Loopia API")
+	}
+
 	// The manifest path should contain a file named config.json that is a sniplet of valid configuration that should be included on the ChallengeRequest passed as part of the test cases.
 	// The test fixture also requires etcd, kube-apiserver and kubectl, found via the TEST_ASSET_ETCD, TEST_ASSET_KUBE_APISERVER and TEST_ASSET_KUBECTL environment variables or on PATH; `make test` downloads them with setup-envtest.
 

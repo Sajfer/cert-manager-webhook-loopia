@@ -310,6 +310,8 @@ Run the tests with the zone to test in, including the trailing dot:
 TEST_ZONE_NAME=example.com. make test
 ```
 
+The conformance tests are behind the `conformance` build tag, which `make test` sets, and are skipped if `TEST_ZONE_NAME` is not set. CI has no Loopia credentials, so it only builds, vets and runs plain `go test`; run the conformance tests locally.
+
 `cert-manager-webhook-loopia` has been tested for conformance, not only simple create/delete TXT-record but also in Strict/Extended mode where multiple simultaneus TXT-records are tested.
 
 [ACME DNS-01 challenge]: https://letsencrypt.org/docs/challenge-types/#dns-01-challenge

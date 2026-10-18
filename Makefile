@@ -15,7 +15,7 @@ test:
 	TEST_ASSET_ETCD="$$ASSETS/etcd" \
 	TEST_ASSET_KUBE_APISERVER="$$ASSETS/kube-apiserver" \
 	TEST_ASSET_KUBECTL="$$ASSETS/kubectl" \
-	go test -v .
+	go test -v -tags conformance .
 
 clean:
 	chmod -R u+w testdata/bin 2>/dev/null; rm -rf testdata/bin
