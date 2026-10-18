@@ -43,10 +43,6 @@ jobs:
       - name: Get dependencies
         run: go mod download
 
-      # Download and unpack required test binaries.
-      - name: Get test binaries
-        run: sh ./testdata/scripts/fetch-test-binaries.sh
-
       # Add real credentials to loopia-credentials.yaml.
       - name: Apply credentials from secret
         env:
@@ -62,4 +58,4 @@ jobs:
           # Note the trailing ".", this means the LOOPIA_TEST_ZONE_NAME should not have a trailing ".".
           TEST_ZONE_NAME: ${{ secrets.LOOPIA_TEST_ZONE_NAME }}.
           TEST_STRICT_MODE: "false"
-        run: go test -v
+        run: make test

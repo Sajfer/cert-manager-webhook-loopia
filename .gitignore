@@ -19,3 +19,6 @@
 ### Helm ###
 # Chart dependencies
 **/charts/*.tgz
+
+### Tests ###
+/testdata/bin/

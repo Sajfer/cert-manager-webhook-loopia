@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jetstack/cert-manager/test/acme/dns"
+	acmetest "github.com/cert-manager/cert-manager/test/acme"
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 
 func TestRunsSuite(t *testing.T) {
 	// The manifest path should contain a file named config.json that is a sniplet of valid configuration that should be included on the ChallengeRequest passed as part of the test cases.
-	// The test fixture also requires the kubebuilder-tools binary for your os/architecture to be downloaded to testdata/bin, there is a script supplied that does this in testdata/scripts.
+	// The test fixture also requires etcd, kube-apiserver and kubectl, found via the TEST_ASSET_ETCD, TEST_ASSET_KUBE_APISERVER and TEST_ASSET_KUBECTL environment variables or on PATH; `make test` downloads them with setup-envtest.
 
 	var strictmode, err = strconv.ParseBool(strictmodeenv)
 	if err != nil {
@@ -28,14 +28,13 @@ func TestRunsSuite(t *testing.T) {
 	}
 
 	solver := &loopiaDNSProviderSolver{}
-	fixture := dns.NewFixture(solver,
-		dns.SetStrict(strictmode),
-		dns.SetBinariesPath("testdata/bin"),
-		dns.SetResolvedZone(zone),
-		dns.SetAllowAmbientCredentials(false),
-		dns.SetManifestPath("testdata/loopia"),
-		dns.SetPollInterval(time.Second*60),
-		dns.SetPropagationLimit(time.Minute*30),
+	fixture := acmetest.NewFixture(solver,
+		acmetest.SetStrict(strictmode),
+		acmetest.SetResolvedZone(zone),
+		acmetest.SetAllowAmbientCredentials(false),
+		acmetest.SetManifestPath("testdata/loopia"),
+		acmetest.SetPollInterval(time.Second*60),
+		acmetest.SetPropagationLimit(time.Minute*30),
 	)
 
 	fixture.RunConformance(t)
