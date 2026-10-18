@@ -310,6 +310,12 @@ Run the tests with the zone to test in, including the trailing dot:
 TEST_ZONE_NAME=example.com. make test
 ```
 
+The test record is created at `cert-manager-dns01-tests.<zone>`. To put it under a subdomain instead, set `TEST_FQDN` (the zone must still be the domain in Loopia):
+
+```shell
+TEST_ZONE_NAME=example.com. TEST_FQDN=cert-manager-dns01-tests.sub.example.com. make test
+```
+
 The conformance tests are behind the `conformance` build tag, which `make test` sets, and are skipped if `TEST_ZONE_NAME` is not set. CI has no Loopia credentials, so it only builds, vets and runs plain `go test`; run the conformance tests locally.
 
 `cert-manager-webhook-loopia` has been tested for conformance, not only simple create/delete TXT-record but also in Strict/Extended mode where multiple simultaneus TXT-records are tested.

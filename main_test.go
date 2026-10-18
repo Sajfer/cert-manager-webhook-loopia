@@ -19,6 +19,10 @@ var (
 	// This needs to be set before running the test.
 	zone = os.Getenv("TEST_ZONE_NAME")
 
+	// Optional environment variable with the full record name to test, ex: cert-manager-dns01-tests.sub.example.com.
+	// Defaults to cert-manager-dns01-tests.<TEST_ZONE_NAME>. Must end with a "." and be inside the zone.
+	fqdn = os.Getenv("TEST_FQDN")
+
 	// Environment variable for enabling the strict mode testing.
 	strictmodeenv = os.Getenv("TEST_STRICT_MODE")
 )
@@ -37,15 +41,20 @@ func TestRunsSuite(t *testing.T) {
 		strictmode = false
 	}
 
-	solver := &loopiaDNSProviderSolver{}
-	fixture := acmetest.NewFixture(solver,
+	opts := []acmetest.Option{
 		acmetest.SetStrict(strictmode),
 		acmetest.SetResolvedZone(zone),
 		acmetest.SetAllowAmbientCredentials(false),
 		acmetest.SetManifestPath("testdata/loopia"),
-		acmetest.SetPollInterval(time.Second*60),
-		acmetest.SetPropagationLimit(time.Minute*30),
-	)
+		acmetest.SetPollInterval(time.Second * 60),
+		acmetest.SetPropagationLimit(time.Minute * 30),
+	}
+	if fqdn != "" {
+		opts = append(opts, acmetest.SetResolvedFQDN(fqdn))
+	}
+
+	solver := &loopiaDNSProviderSolver{}
+	fixture := acmetest.NewFixture(solver, opts...)
 
 	fixture.RunConformance(t)
 }
