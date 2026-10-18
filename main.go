@@ -172,17 +172,21 @@ func (c *loopiaDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 		return fmt.Errorf("unable to get zone records: %v", err)
 	}
 
-	// Loop records to get the one to delete, if found delete it...
+	// Delete the TXT records holding this challenge's key, counting what is left.
+	remaining := 0
 	for _, zoneRecord := range zoneRecords {
 		if zoneRecord.Type == "TXT" && zoneRecord.Value == ch.Key {
 			if err := loopiaClient.RemoveZoneRecord(ctx, domain, subdomain, zoneRecord.ID); err != nil {
 				return fmt.Errorf("unable to delete TXT record: %v", err)
 			}
+			continue
 		}
+		remaining++
 	}
 
-	// Clean up subdomain.
-	if len(zoneRecords) <= 1 {
+	// Remove the subdomain only when it has no other records left, and never
+	// the zone root itself.
+	if subdomain != "" && remaining == 0 {
 		if err := loopiaClient.RemoveSubdomain(ctx, domain, subdomain); err != nil {
 			return fmt.Errorf("unable to remove subdomain: %v", err)
 		}
