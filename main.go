@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	loopia "github.com/Sajfer/loopia-go"
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
-	loopia "github.com/jonlil/loopia-go"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -21,6 +23,9 @@ import (
 
 const (
 	LoopiaMinTtl = 300 // Loopia requires a TTL of minimum 300 sec.
+
+	// loopiaTimeout bounds the Loopia API calls made by Present and CleanUp.
+	loopiaTimeout = 2 * time.Minute
 )
 
 var GroupName = os.Getenv("GROUP_NAME")
@@ -87,17 +92,16 @@ func (c *loopiaDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	// Initialize new Loopia client.
-	loopiaClient, err := loopia.New(creds.Username, creds.Password)
-	if err != nil {
-		return fmt.Errorf("could not initialize Loopia client: %v", err)
-	}
+	loopiaClient := loopia.New(creds.Username, creds.Password)
+	ctx, cancel := context.WithTimeout(context.Background(), loopiaTimeout)
+	defer cancel()
 
 	// Split and format domain and sub domain values.
 	subdomain, domain := c.getDomainAndSubdomain(ch)
 	klog.V(2).Infof("Extracted  subdomain=%s and domain=%s", subdomain, domain)
 
 	// Get loopia records for subdomain.
-	zoneRecords, err := loopiaClient.GetZoneRecords(domain, subdomain)
+	zoneRecords, err := loopiaClient.GetZoneRecords(ctx, domain, subdomain)
 	if err != nil {
 		klog.V(2).Infof("Subdomain %s is not present, needs to be created", subdomain)
 	} else {
@@ -121,18 +125,13 @@ func (c *loopiaDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	// Record isn't present, create it, subdomain is created automatically.
-	err = loopiaClient.AddZoneRecord(domain, subdomain, &record)
-	if err != nil {
+	// ErrRecordIDUnknown means the record was created but its ID could not be
+	// looked up; CleanUp finds records by value, so the ID is not needed.
+	err = loopiaClient.AddZoneRecord(ctx, domain, subdomain, &record)
+	if err != nil && !errors.Is(err, loopia.ErrRecordIDUnknown) {
 		return fmt.Errorf("unable to create txt-record: %v", err)
-	} else {
-
-		// Verify the record has been created by checking it's id.
-		if record.ID != 0 {
-			klog.V(2).Infof("Successfully created txt-record in %s subdomain", subdomain)
-		} else {
-			return fmt.Errorf("unexpected error: txt-record was not created: %v", err)
-		}
 	}
+	klog.V(2).Infof("Successfully created txt-record in %s subdomain", subdomain)
 
 	return nil
 }
@@ -159,17 +158,16 @@ func (c *loopiaDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	// Initialize Loopia client.
-	loopiaClient, err := loopia.New(creds.Username, creds.Password)
-	if err != nil {
-		return fmt.Errorf("could not initialize loopia client: %v", err)
-	}
+	loopiaClient := loopia.New(creds.Username, creds.Password)
+	ctx, cancel := context.WithTimeout(context.Background(), loopiaTimeout)
+	defer cancel()
 
 	// Split and format domain and sub domain values.
 	subdomain, domain := c.getDomainAndSubdomain(ch)
 	klog.V(2).Infof("Cleanup for subdomain=%s, domain=%s", subdomain, domain)
 
 	// Get loopia records for subdomain.
-	zoneRecords, err := loopiaClient.GetZoneRecords(domain, subdomain)
+	zoneRecords, err := loopiaClient.GetZoneRecords(ctx, domain, subdomain)
 	if err != nil {
 		return fmt.Errorf("unable to get zone records: %v", err)
 	}
@@ -177,8 +175,7 @@ func (c *loopiaDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	// Loop records to get the one to delete, if found delete it...
 	for _, zoneRecord := range zoneRecords {
 		if zoneRecord.Type == "TXT" && zoneRecord.Value == ch.Key {
-			_, err := loopiaClient.RemoveZoneRecord(domain, subdomain, zoneRecord.ID)
-			if err != nil {
+			if err := loopiaClient.RemoveZoneRecord(ctx, domain, subdomain, zoneRecord.ID); err != nil {
 				return fmt.Errorf("unable to delete TXT record: %v", err)
 			}
 		}
@@ -186,8 +183,7 @@ func (c *loopiaDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 
 	// Clean up subdomain.
 	if len(zoneRecords) <= 1 {
-		_, err := loopiaClient.RemoveSubDomain(domain, subdomain)
-		if err != nil {
+		if err := loopiaClient.RemoveSubdomain(ctx, domain, subdomain); err != nil {
 			return fmt.Errorf("unable to remove subdomain: %v", err)
 		}
 	}
