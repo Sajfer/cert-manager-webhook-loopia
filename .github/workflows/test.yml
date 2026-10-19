@@ -1,50 +1,25 @@
 name: test
-### Workflow for testing cert-manager-webhook-loopia ###
-### Conformance tests need a live Loopia account and are only run locally ###
+# Checks pull requests. The conformance tests need a live Loopia account and
+# are only run locally (see readme); pushes to main are checked by release.yml.
 
-# Run on push/pull request of Go-files in branch main or manually.
 on:
-  workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "**.go"
-      - "**.mod"
-      - "**.sum"
   pull_request:
     branches: [main]
-    paths:
-      - "**.go"
-      - "**.mod"
-      - "**.sum"
-    tags-ignore:
-      - "*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      # Echo...
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - uses: actions/checkout@v5
 
-      # Check out code.
-      - name: Check out code
-        uses: actions/checkout@v5
-
-      # Download a specific version of the Go tool.
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
-      # Get Go dependencies.
-      - name: Get dependencies
-        run: go mod download
-
-      # Build and vet. The conformance tests need a live Loopia account,
-      # so they are behind the "conformance" build tag and only run locally (see readme).
       - name: Build
         run: go build ./...
 
@@ -53,3 +28,11 @@ jobs:
 
       - name: Test
         run: go test -v ./...
+
+      - uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint charts/cert-manager-webhook-loopia
+
+      - name: Build image
+        run: docker build -t cert-manager-webhook-loopia:ci .
