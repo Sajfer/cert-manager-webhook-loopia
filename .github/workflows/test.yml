@@ -1,6 +1,6 @@
 name: test
 ### Workflow for testing cert-manager-webhook-loopia ###
-### Tests are executed using a test-fixure supplied that build up a complete Kubernetes control plane ###
+### Conformance tests need a live Loopia account and are only run locally ###
 
 # Run on push/pull request of Go-files in branch main or manually.
 on:
@@ -29,37 +29,27 @@ jobs:
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
 
-      # Download a specific version of the Go tool.
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: '1.16.5'
-
       # Check out code.
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
+
+      # Download a specific version of the Go tool.
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
 
       # Get Go dependencies.
       - name: Get dependencies
         run: go mod download
 
-      # Download and unpack required test binaries.
-      - name: Get test binaries
-        run: sh ./testdata/scripts/fetch-test-binaries.sh
+      # Build and vet. The conformance tests need a live Loopia account,
+      # so they are behind the "conformance" build tag and only run locally (see readme).
+      - name: Build
+        run: go build ./...
 
-      # Add real credentials to loopia-credentials.yaml.
-      - name: Apply credentials from secret
-        env:
-          LOOPIA_USERNAME: ${{ secrets.LOOPIA_USERNAME }}
-          LOOPIA_PASSWORD: ${{ secrets.LOOPIA_PASSWORD }}
-        run: |
-          sed -i -e "s/\[LOOPIA USERNAME\]/$LOOPIA_USERNAME/" testdata/loopia/loopia-credentials.yaml
-          sed -i -e "s/\[LOOPIA PASSWORD\]/$LOOPIA_PASSWORD/" testdata/loopia/loopia-credentials.yaml
+      - name: Vet
+        run: go vet -tags conformance ./...
 
-      # Run conformance tests.
-      - name: Run tests
-        env:
-          # Note the trailing ".", this means the LOOPIA_TEST_ZONE_NAME should not have a trailing ".".
-          TEST_ZONE_NAME: ${{ secrets.LOOPIA_TEST_ZONE_NAME }}.
-          TEST_STRICT_MODE: "false"
-        run: go test -v
+      - name: Test
+        run: go test -v ./...

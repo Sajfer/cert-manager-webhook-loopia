@@ -19,3 +19,7 @@
 ### Helm ###
 # Chart dependencies
 **/charts/*.tgz
+
+### Tests ###
+/testdata/bin/
+/testdata/loopia/loopia-credentials.yaml

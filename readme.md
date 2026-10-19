@@ -72,7 +72,7 @@ An image is hosted on Docker Hub:
 
 ### 1.3. Compatibility
 
-This webhook has been tested with [cert-manager] v1.2.0 and Kubernetes v1.20.x on `amd64`.
+This webhook is built against [cert-manager] v1.21 and the Kubernetes v1.36 client libraries.
 
 ## 2. Installation
 
@@ -102,7 +102,7 @@ helm repo update
 Install Cert-Manager (with CRD´s):
 
 ```shell
-helm install cert-manager jetstack/cert-manager --namespace cert-manager --version v1.2.0 --create-namespace --set installCRDs=true
+helm install cert-manager jetstack/cert-manager --namespace cert-manager --version v1.21.2 --create-namespace --set crds.enabled=true
 ```
 
 Verify Cert-Manager installation by getting the cert-manager running pods:
@@ -293,19 +293,30 @@ Cert-Manager has a great page that describes how to do [troubleshooting](https:/
 
 ## 4. Conformance Testing
 
-The testing of a cert-manager weebhook is a bit special and not a typical unit or integration test, instead there´s a test-fixure supplied that build up a complete Kubernetes control plane where testing is performed. This not only requires you to download a set of test binaries but also prepare some files for testing.
-
-- **testdata/scripts/fetch-test-binaries.sh:**\
-  Script for downloading test binaries, this script is limited to Linux/Amd64 but other OS/architecture versions are available.
+The testing of a cert-manager weebhook is a bit special and not a typical unit or integration test, instead there´s a test-fixure supplied that build up a complete Kubernetes control plane where testing is performed. This requires etcd, kube-apiserver and kubectl binaries, which `make test` downloads to `testdata/bin` using [setup-envtest](https://github.com/kubernetes-sigs/controller-runtime/tree/main/tools/setup-envtest), and some files prepared for testing.
 
 - **testdata/loopia/config.json:**\
   This is a config file that basically informs the test fixture how to find the Kubernetes secret and keys that contains the Loopia API username and password.
 
 - **testdata/loopia/loopia-credentials.yaml:**\
-  A Kubernetes secret configuration that will be applied to the Kubernetes control plane during test. Real Loopia API credentials is required since the tests connects to Loopia creating a cert-manager-dns01-tests sub domain with a TXT-record.
+  A Kubernetes secret configuration that will be applied to the Kubernetes control plane during test. Real Loopia API credentials is required since the tests connects to Loopia creating a cert-manager-dns01-tests sub domain with a TXT-record. Create it by copying `loopia-credentials.yaml.example` and filling in your credentials; it is git-ignored so the credentials are not committed.
 
 - **testdata/bin:**\
-  Folder location for the test-binaries.
+  Folder location for the test-binaries (git-ignored).
+
+Run the tests with the zone to test in, including the trailing dot:
+
+```shell
+TEST_ZONE_NAME=example.com. make test
+```
+
+The test record is created at `cert-manager-dns01-tests.<zone>`. To put it under a subdomain instead, set `TEST_FQDN` (the zone must still be the domain in Loopia):
+
+```shell
+TEST_ZONE_NAME=example.com. TEST_FQDN=cert-manager-dns01-tests.sub.example.com. make test
+```
+
+The conformance tests are behind the `conformance` build tag, which `make test` sets, and are skipped if `TEST_ZONE_NAME` is not set. CI has no Loopia credentials, so it only builds, vets and runs plain `go test`; run the conformance tests locally.
 
 `cert-manager-webhook-loopia` has been tested for conformance, not only simple create/delete TXT-record but also in Strict/Extended mode where multiple simultaneus TXT-records are tested.
 

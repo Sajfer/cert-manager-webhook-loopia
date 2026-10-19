@@ -1,3 +1,8 @@
+//go:build conformance
+
+// The conformance tests run against the live Loopia API and need envtest
+// binaries, so they are behind the "conformance" build tag. Run them with `make test`.
+
 package main
 
 import (
@@ -6,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jetstack/cert-manager/test/acme/dns"
+	acmetest "github.com/cert-manager/cert-manager/test/acme"
 )
 
 var (
@@ -14,29 +19,42 @@ var (
 	// This needs to be set before running the test.
 	zone = os.Getenv("TEST_ZONE_NAME")
 
+	// Optional environment variable with the full record name to test, ex: cert-manager-dns01-tests.sub.example.com.
+	// Defaults to cert-manager-dns01-tests.<TEST_ZONE_NAME>. Must end with a "." and be inside the zone.
+	fqdn = os.Getenv("TEST_FQDN")
+
 	// Environment variable for enabling the strict mode testing.
 	strictmodeenv = os.Getenv("TEST_STRICT_MODE")
 )
 
 func TestRunsSuite(t *testing.T) {
+	// The conformance suite talks to the live Loopia API, so it only runs when a test zone is given.
+	if zone == "" {
+		t.Skip("TEST_ZONE_NAME not set, skipping conformance tests against the live Loopia API")
+	}
+
 	// The manifest path should contain a file named config.json that is a sniplet of valid configuration that should be included on the ChallengeRequest passed as part of the test cases.
-	// The test fixture also requires the kubebuilder-tools binary for your os/architecture to be downloaded to testdata/bin, there is a script supplied that does this in testdata/scripts.
+	// The test fixture also requires etcd, kube-apiserver and kubectl, found via the TEST_ASSET_ETCD, TEST_ASSET_KUBE_APISERVER and TEST_ASSET_KUBECTL environment variables or on PATH; `make test` downloads them with setup-envtest.
 
 	var strictmode, err = strconv.ParseBool(strictmodeenv)
 	if err != nil {
 		strictmode = false
 	}
 
+	opts := []acmetest.Option{
+		acmetest.SetStrict(strictmode),
+		acmetest.SetResolvedZone(zone),
+		acmetest.SetAllowAmbientCredentials(false),
+		acmetest.SetManifestPath("testdata/loopia"),
+		acmetest.SetPollInterval(time.Second * 60),
+		acmetest.SetPropagationLimit(time.Minute * 30),
+	}
+	if fqdn != "" {
+		opts = append(opts, acmetest.SetResolvedFQDN(fqdn))
+	}
+
 	solver := &loopiaDNSProviderSolver{}
-	fixture := dns.NewFixture(solver,
-		dns.SetStrict(strictmode),
-		dns.SetBinariesPath("testdata/bin"),
-		dns.SetResolvedZone(zone),
-		dns.SetAllowAmbientCredentials(false),
-		dns.SetManifestPath("testdata/loopia"),
-		dns.SetPollInterval(time.Second*60),
-		dns.SetPropagationLimit(time.Minute*30),
-	)
+	fixture := acmetest.NewFixture(solver, opts...)
 
 	fixture.RunConformance(t)
 }

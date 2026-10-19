@@ -27,23 +27,19 @@ jobs:
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
 
-      # Download a specific version of the Go tool.
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.16.5
-
       # Check out code.
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
+
+      # Download a specific version of the Go tool.
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
 
       # Get Go dependencies.
       - name: Get dependencies
         run: go mod download
-
-      # Download and unpack required test binaries.
-      - name: Get test binaries
-        run: sh ./testdata/scripts/fetch-test-binaries.sh
 
       # Add real credentials to loopia-credentials.yaml.
       - name: Apply credentials from secret
@@ -59,7 +55,7 @@ jobs:
         env:
           TEST_ZONE_NAME: ${{ secrets.LOOPIA_TEST_ZONE_NAME }}.
           TEST_STRICT_MODE: "false"
-        run: go test -v
+        run: make test
 
   # Build docker image and push to Docker Hub (depends on teststrict).
   release_docker:
@@ -73,7 +69,7 @@ jobs:
 
       # Check out code, required to get latest tag.
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
 
       # Get latest tag
       - name: 'Get previous tag'
@@ -92,9 +88,9 @@ jobs:
 
       # Download a specific version of the Go tool.
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v6
         with:
-          go-version: 1.16.5
+          go-version-file: go.mod
 
       # Create and boot a Docker-BuildX-builder
       - name: Set up Docker Buildx
@@ -123,7 +119,7 @@ jobs:
 
     # Check out code.
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
