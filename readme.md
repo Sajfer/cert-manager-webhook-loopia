@@ -75,8 +75,8 @@ Images are published to GitHub Container Registry as `ghcr.io/sajfer/cert-manage
 To make a release, tag `main` and push the tag; the version comes only from the tag:
 
 ```shell
-git tag v2.0.0
-git push origin v2.0.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 ### 1.3. Compatibility
@@ -132,7 +132,7 @@ Note that it might take a minute or two before all pods are running.
 The `cert-manager-webhook-loopia` can be installed in multiple ways but the easiest is using helm:
 
 ```shell
-helm install cert-manager-webhook-loopia oci://ghcr.io/sajfer/charts/cert-manager-webhook-loopia --version 2.0.0 --namespace cert-manager
+helm install cert-manager-webhook-loopia oci://ghcr.io/sajfer/charts/cert-manager-webhook-loopia --version 1.2.0 --namespace cert-manager
 ```
 
 This installs the chart with the image of the same version from `ghcr.io/sajfer/cert-manager-webhook-loopia`. The chart lets the webhook read secrets in cert-manager's namespace, where the Loopia credentials for a ClusterIssuer are looked up.
