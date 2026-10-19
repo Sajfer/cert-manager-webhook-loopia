@@ -6,9 +6,9 @@
 
 `cert-manager-webhook-loopia` is an ACME webhook for [Cert-Manager](https://cert-manager.io/) that allows for [Cert-Manager] to use `DNS-01` challenge against the [Loopia](https://loopia.com) DNS.
 
-[![test](https://github.com/Identitry/cert-manager-webhook-loopia/actions/workflows/test.yml/badge.svg)](https://github.com/Identitry/cert-manager-webhook-loopia/actions/workflows/test.yml)
+[![test](https://github.com/Sajfer/cert-manager-webhook-loopia/actions/workflows/test.yml/badge.svg)](https://github.com/Sajfer/cert-manager-webhook-loopia/actions/workflows/test.yml)
 
-[![release](https://github.com/Identitry/cert-manager-webhook-loopia/actions/workflows/release.yml/badge.svg)](https://github.com/Identitry/cert-manager-webhook-loopia/actions/workflows/release.yml)
+[![release](https://github.com/Sajfer/cert-manager-webhook-loopia/actions/workflows/release.yml/badge.svg)](https://github.com/Sajfer/cert-manager-webhook-loopia/actions/workflows/release.yml)
 
 ## Table of Contents
 
@@ -16,7 +16,7 @@
 
    1.1. [Building](#11-building)
 
-   1.2. [Docker Image](#12-docker-image)
+   1.2. [Container Image and Releases](#12-container-image-and-releases)
 
    1.3. [Compatibility](#13-compatibility)
 2. [Installation](#2-installation)
@@ -65,10 +65,19 @@ Build the container image `cert-manager-webhook-loopia:latest`
 make build
 ```
 
-### 1.2. Docker Image
+### 1.2. Container Image and Releases
 
-An image is hosted on Docker Hub:
-[identitry/cert-manager-webhook-loopia](https://hub.docker.com/repository/docker/identitry/cert-manager-webhook-loopia)
+Images are published to GitHub Container Registry as `ghcr.io/sajfer/cert-manager-webhook-loopia`:
+
+- Every push to `main` publishes the image tagged with the short commit hash and `main`.
+- Every version tag `vX.Y.Z` publishes the image tagged `X.Y.Z`, `X.Y` and `latest`, pushes the Helm chart with version `X.Y.Z` to `oci://ghcr.io/sajfer/charts/cert-manager-webhook-loopia` and creates a GitHub release.
+
+To make a release, tag `main` and push the tag; the version comes only from the tag:
+
+```shell
+git tag v2.0.0
+git push origin v2.0.0
+```
 
 ### 1.3. Compatibility
 
@@ -123,12 +132,10 @@ Note that it might take a minute or two before all pods are running.
 The `cert-manager-webhook-loopia` can be installed in multiple ways but the easiest is using helm:
 
 ```shell
-helm repo add identitry https://identitry.github.io/cert-manager-webhook-loopia
-helm repo update
-helm install cert-manager-webhook-loopia identitry/cert-manager-webhook-loopia --namespace cert-manager
+helm install cert-manager-webhook-loopia oci://ghcr.io/sajfer/charts/cert-manager-webhook-loopia --version 2.0.0 --namespace cert-manager
 ```
 
-This will install a helm chart with the pre built image available in Docker Hub as identitry/cert-manager-webhook-loopia.
+This installs the chart with the image of the same version from `ghcr.io/sajfer/cert-manager-webhook-loopia`. The chart lets the webhook read secrets in cert-manager's namespace, where the Loopia credentials for a ClusterIssuer are looked up.
 
 If you wish to uninstall `cert-manager-webhook-loopia` simply run this command:
 
@@ -329,5 +336,5 @@ The conformance tests are behind the `conformance` build tag, which `make test` 
 [Loopia Customer Zone]: https://www.loopia.com/login
 [Loopia API]: https://doc.livedns.loopia.com
 [Helm]: https://helm.sh
-[image tags]: https://hub.docker.com/repository/docker/identitry/cert-manager-webhook-loopia
+[image tags]: https://github.com/Sajfer/cert-manager-webhook-loopia/pkgs/container/cert-manager-webhook-loopia
 [Kubernetes]: https://kubernetes.io
